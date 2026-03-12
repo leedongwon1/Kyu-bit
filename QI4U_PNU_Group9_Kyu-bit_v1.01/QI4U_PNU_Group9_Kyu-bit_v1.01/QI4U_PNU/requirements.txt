@@ -1,0 +1,6 @@
+# requirements.txt
+Flask
+numpy
+matplotlib
+dwave-neal
+gunicorn

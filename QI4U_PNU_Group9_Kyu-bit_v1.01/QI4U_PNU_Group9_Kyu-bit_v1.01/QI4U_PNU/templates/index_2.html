@@ -1,0 +1,86 @@
+<!-- templates/index_2.html: displays only the normalized-barplot returned by normalized_graph() -->
+<!doctype html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>Agricultural Optimization SA Flask &ndash; bar graph only</title>
+  <link rel='stylesheet' href='{{ url_for('static', filename='style.css') }}'>
+</head>
+<body>
+  <div class='page'>
+    <div class='card'>
+      <h1>🌾 Kyu-AOS (bar chart view)</h1>
+
+      {% if error %}
+        <div class='alert error'>{{ error }}</div>
+      {% endif %}
+
+      <form id='opt-form' method='post' class='form-grid'>
+        <label for='length_cm'>Farm Length [cm]</label>
+        <input id='length_cm' name='length_cm' type='number' min='1' max='10000' required value='{{ values.length_cm }}'>
+
+        <label for='width_cm'>Farm Width [cm]</label>
+        <input id='width_cm' name='width_cm' type='number' min='1' max='10000' required value='{{ values.width_cm }}'>
+
+        <label for='crop_key'>Crop</label>
+        <select id='crop_key' name='crop_key' required>
+          {% for key, crop in crops.items() %}
+            <option
+              value='{{ key }}'
+              data-spacing='{{ crop.spacing_text }}'
+              {% if values.crop_key == key %}selected{% endif %}
+            >
+              {{ crop.label }}
+            </option>
+          {% endfor %}
+        </select>
+
+        <div class='spacing-box' id='spacing-box'>
+          <span class='spacing-label'>Applied Spacing</span>
+          <span id='spacing-text'></span>
+        </div>
+
+        <button id='submit-btn' type='submit' class='btn'>Run Optimization</button>
+      </form>
+    </div>
+
+    {% if result %}
+      <div class='card'>
+        <h2>Normalized Bar Graph</h2>
+        <div class='plot-wrap'>
+          <img src='data:image/png;base64,{{ result }}' alt='normalized metrics' class='plot-img'>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div id='loading-overlay' class='loading-overlay hidden'>
+    <div class='loading-card'>
+      <div class='spinner'></div>
+      <div class='loading-text'>Running（실행 중）</div>
+      <div class='loading-sub'>Optimization is running</div>
+    </div>
+  </div>
+
+  <script>
+    const cropSelect = document.getElementById('crop_key');
+    const spacingText = document.getElementById('spacing-text');
+    const form = document.getElementById('opt-form');
+    const overlay = document.getElementById('loading-overlay');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function updateSpacingText() {
+      const opt = cropSelect.options[cropSelect.selectedIndex];
+      spacingText.textContent = opt.dataset.spacing || '';
+    }
+
+    cropSelect.addEventListener('change', updateSpacingText);
+    updateSpacingText();
+
+    form.addEventListener('submit', () => {
+      overlay.classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
