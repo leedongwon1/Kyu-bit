@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌾 Kyu-bit 농업 최적화</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 50%, #a5d6a7 100%);
+    min-height: 100vh;
+    color: #2e7d32;
+  }
+  .header {
+    background: linear-gradient(135deg, #1b5e20, #2e7d32, #388e3c);
+    color: white; padding: 30px 20px; text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .header h1 { font-size: 2em; margin-bottom: 8px; }
+  .header p { opacity: 0.9; font-size: 1em; }
+  .header .badge {
+    display: inline-block; background: rgba(255,255,255,0.2);
+    padding: 4px 12px; border-radius: 20px; font-size: 0.8em; margin-top: 8px;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+  .input-section {
+    background: white; border-radius: 16px; padding: 24px; margin: 20px 0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  }
+  .input-section h2 { font-size: 1.3em; margin-bottom: 16px; color: #1b5e20; }
+  .input-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+  .input-group { flex: 1; min-width: 120px; }
+  .input-group label {
+    display: block; font-size: 0.85em; color: #666;
+    margin-bottom: 4px; font-weight: 600;
+  }
+  .input-group input, .input-group select {
+    width: 100%; padding: 10px 14px; border: 2px solid #c8e6c9;
+    border-radius: 10px; font-size: 1em; outline: none; transition: border-color 0.3s;
+  }
+  .input-group input:focus, .input-group select:focus { border-color: #2e7d32; }
+  .btn {
+    padding: 12px 28px; border: none; border-radius: 12px;
+    font-size: 1em; font-weight: 700; cursor: pointer;
+    transition: all 0.3s; min-width: 140px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #2e7d32, #43a047); color: white;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(46,125,50,0.4); }
+  .btn-secondary {
+    background: linear-gradient(135deg, #f57f17, #ff8f00); color: white;
+  }
+  .btn-secondary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(245,127,23,0.4); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .section-title { font-size: 1.3em; color: #1b5e20; margin: 30px 0 16px; font-weight: 700; }
+  .crop-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px;
+  }
+  .crop-card {
+    background: white; border-radius: 14px; padding: 16px; text-align: center;
+    cursor: pointer; transition: all 0.3s; border: 2px solid transparent;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .crop-card:hover {
+    transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    border-color: #66bb6a;
+  }
+  .crop-card.selected { border-color: #2e7d32; background: #e8f5e9; }
+  .crop-card .emoji { font-size: 2.2em; margin-bottom: 6px; }
+  .crop-card .name-kr { font-weight: 700; font-size: 1em; color: #1b5e20; }
+  .crop-card .name-en { font-size: 0.75em; color: #888; margin-top: 2px; }
+  .crop-card .spacing { font-size: 0.7em; color: #aaa; margin-top: 4px; }
+  .loading { text-align: center; padding: 40px; display: none; }
+  .spinner {
+    width: 50px; height: 50px; border: 5px solid #c8e6c9;
+    border-top: 5px solid #2e7d32; border-radius: 50%;
+    animation: spin 1s linear infinite; margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .result-section { margin-top: 30px; display: none; }
+  .result-card {
+    background: white; border-radius: 16px; padding: 24px; margin-bottom: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  }
+  .result-card h3 {
+    font-size: 1.2em; color: #1b5e20; margin-bottom: 16px;
+    padding-bottom: 10px; border-bottom: 2px solid #e8f5e9;
+  }
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;
+  }
+  .stat-item { background: #f1f8e9; border-radius: 12px; padding: 14px; }
+  .stat-item .label { font-size: 0.8em; color: #666; margin-bottom: 4px; }
+  .stat-item .value { font-size: 1.3em; font-weight: 700; color: #1b5e20; }
+  .stat-item .value.highlight { color: #e65100; font-size: 1.6em; }
+  .heatmap-container { text-align: center; margin-top: 16px; }
+  .heatmap-container img {
+    max-width: 100%; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  }
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+  .compare-table th {
+    background: #2e7d32; color: white; padding: 10px 8px;
+    text-align: center; font-weight: 600;
+  }
+  .compare-table td {
+    padding: 10px 8px; text-align: center; border-bottom: 1px solid #e8f5e9;
+  }
+  .compare-table tr:hover { background: #f1f8e9; }
+  .compare-table .best { color: #e65100; font-weight: 700; }
+  .footer { text-align: center; padding: 30px; color: #666; font-size: 0.85em; }
+  @media (max-width: 600px) {
+    .header h1 { font-size: 1.4em; }
+    .crop-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+    .input-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🌾 Kyu-bit 농업 최적화</h1>
+  <p>QUBO + Simulated Annealing 기반 작물 배치 최적화</p>
+  <div class="badge">⚛️ Quantum-Inspired Optimization v2.0</div>
+</div>
+
+<div class="container">
+  <!-- 밭 크기 입력 -->
+  <div class="input-section">
+    <h2>📐 밭 크기 입력</h2>
+    <div class="input-row">
+      <div class="input-group">
+        <label>세로 길이 (cm)</label>
+        <input type="number" id="lengthInput" value="400" min="1" max="10000">
+      </div>
+      <div class="input-group">
+        <label>가로 길이 (cm)</label>
+        <input type="number" id="widthInput" value="200" min="1" max="10000">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnSingle" onclick="runSingle()" disabled>
+        🌱 선택 작물 최적화
+      </button>
+      <button class="btn btn-secondary" onclick="runAll()">
+        📊 전체 작물 비교
+      </button>
+    </div>
+  </div>
+
+  <!-- 작물 선택 -->
+  <div class="section-title">🌿 작물을 선택하세요</div>
+  <div class="crop-grid" id="cropGrid"></div>
+
+  <!-- 로딩 -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>🧬 양자 영감 최적화 계산 중...</p>
+  </div>
+
+  <!-- 단일 결과 -->
+  <div class="result-section" id="singleResult">
+    <div class="result-card">
+      <h3 id="resultTitle">결과</h3>
+      <div class="stat-grid" id="statGrid"></div>
+    </div>
+    <div class="result-card">
+      <h3>🗺️ 배치 히트맵</h3>
+      <div class="heatmap-container">
+        <img id="heatmapImg" src="" alt="Heatmap">
+      </div>
+    </div>
+  </div>
+
+  <!-- 전체 비교 결과 -->
+  <div class="result-section" id="allResult">
+    <div class="result-card">
+      <h3 id="allResultTitle">📊 전체 작물 비교 결과</h3>
+      <div style="overflow-x:auto;">
+        <table class="compare-table" id="compareTable"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <p>© 2025 Kyu-bit | Author: 이동원 | Powered by D-Wave Neal SA</p>
+</div>
+
+<script>
+const CROPS = CROP_DATA_PLACEHOLDER;
+let selectedCrop = null;
+
+function renderCrops() {
+  const grid = document.getElementById('cropGrid');
+  grid.innerHTML = '';
+  for (const [key, crop] of Object.entries(CROPS)) {
+    const card = document.createElement('div');
+    card.className = 'crop-card';
+    card.dataset.key = key;
+    card.innerHTML = `
+      <div class="emoji">${crop.emoji}</div>
+      <div class="name-kr">${crop.label_kr}</div>
+      <div class="name-en">${crop.label}</div>
+      <div class="spacing">${crop.spacing_text}</div>
+    `;
+    card.onclick = () => selectCrop(key, card);
+    grid.appendChild(card);
+  }
+}
+
+function selectCrop(key, card) {
+  document.querySelectorAll('.crop-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedCrop = key;
+  document.getElementById('btnSingle').disabled = false;
+}
+
+async function runSingle() {
+  if (!selectedCrop) return alert('작물을 선택하세요!');
+  const length_cm = parseInt(document.getElementById('lengthInput').value);
+  const width_cm = parseInt(document.getElementById('widthInput').value);
+  if (!length_cm || !width_cm) return alert('밭 크기를 입력하세요!');
+  showLoading(true); hideResults();
+  try {
+    const res = await fetch('/api/optimize/single', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ length_cm, width_cm, crop_key: selectedCrop })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Error');
+    displaySingleResult(data);
+  } catch(e) { alert('오류: ' + e.message); }
+  showLoading(false);
+}
+
+function displaySingleResult(d) {
+  const crop = CROPS[selectedCrop];
+  document.getElementById('resultTitle').textContent =
+    `${crop.emoji} ${crop.label_kr} (${d.crop_label}) 최적화 결과`;
+  const stats = [
+    { label: '작물', value: crop.label_kr, cls: '' },
+    { label: '재식 간격', value: d.spacing_text, cls: '' },
+    { label: '밭 크기', value: `${d.length_cm} × ${d.width_cm} cm`, cls: '' },
+    { label: '후보 격자 간격', value: `${d.candidate_step_r_cm} × ${d.candidate_step_c_cm} cm`, cls: '' },
+    { label: '후보 격자 크기', value: `${d.grid_h} × ${d.grid_w}`, cls: '' },
+    { label: '🌱 실제 심은 수', value: d.plant_count, cls: 'highlight' },
+    { label: '단순 격자 기준', value: d.simple_capacity, cls: '' },
+    { label: 'Best Energy', value: d.best_energy.toFixed(3), cls: '' },
+  ];
+  const grid = document.getElementById('statGrid');
+  grid.innerHTML = stats.map(s => `
+    <div class="stat-item">
+      <div class="label">${s.label}</div>
+      <div class="value ${s.cls}">${s.value}</div>
+    </div>
+  `).join('');
+  document.getElementById('heatmapImg').src = 'data:image/png;base64,' + d.plot_base64;
+  document.getElementById('singleResult').style.display = 'block';
+}
+
+async function runAll() {
+  const length_cm = parseInt(document.getElementById('lengthInput').value);
+  const width_cm = parseInt(document.getElementById('widthInput').value);
+  if (!length_cm || !width_cm) return alert('밭 크기를 입력하세요!');
+  showLoading(true); hideResults();
+  try {
+    const res = await fetch('/api/optimize/all', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ length_cm, width_cm })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Error');
+    displayAllResult(data, length_cm, width_cm);
+  } catch(e) { alert('오류: ' + e.message); }
+  showLoading(false);
+}
+
+function displayAllResult(data, length_cm, width_cm) {
+  document.getElementById('allResultTitle').textContent =
+    `📊 전체 작물 비교 (밭: ${length_cm} × ${width_cm} cm)`;
+  const maxPlant = Math.max(...data.map(r => r.plant_count));
+  let html = `<tr>
+    <th>작물</th><th>간격</th><th>심은 수</th><th>단순 기준</th><th>Energy</th>
+  </tr>`;
+  for (const r of data) {
+    const crop = CROPS[r.crop_name] || {};
+    const isBest = r.plant_count === maxPlant ? 'best' : '';
+    html += `<tr>
+      <td>${crop.emoji || ''} ${crop.label_kr || r.crop_label}</td>
+      <td>${r.spacing_text}</td>
+      <td class="${isBest}">${r.plant_count}</td>
+      <td>${r.simple_capacity}</td>
+      <td>${r.best_energy.toFixed(1)}</td>
+    </tr>`;
+  }
+  document.getElementById('compareTable').innerHTML = html;
+  document.getElementById('allResult').style.display = 'block';
+}
+
+function showLoading(show) {
+  document.getElementById('loading').style.display = show ? 'block' : 'none';
+}
+function hideResults() {
+  document.getElementById('singleResult').style.display = 'none';
+  document.getElementById('allResult').style.display = 'none';
+}
+
+renderCrops();
+</script>
+</body>
+</html>
