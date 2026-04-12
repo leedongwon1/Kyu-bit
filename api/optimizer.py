@@ -1,6 +1,7 @@
 """
 QUBO 구성 + Simulated Annealing 최적화 핵심 로직
 """
+from logger import logger
 
 import io
 import math
@@ -26,11 +27,6 @@ def get_idx(r: int, c: int, w: int) -> int:
 
 
 def choose_candidate_step(spacing_row_cm, spacing_col_cm, length_cm, width_cm):
-    """
-    후보점 간격 계산.
-    작물 간격의 절반 정도로 설정하여 SA가 배치를 선택할 여지를 남김.
-    변수 수가 MAX_VARS를 초과하면 자동으로 해상도를 낮춤.
-    """
     step_r = max(5, int(round(spacing_row_cm / 2)))
     step_c = max(5, int(round(spacing_col_cm / 2)))
     h = max(1, length_cm // step_r)
@@ -49,11 +45,6 @@ def choose_candidate_step(spacing_row_cm, spacing_col_cm, length_cm, width_cm):
 # ── QUBO 행렬 생성 ──
 
 def build_qubo(S, step_r, step_c, spacing_row_cm, spacing_col_cm):
-    """
-    QUBO 행렬 생성.
-    - 대각항: 가능한 한 많이 심기 + 지력 높은 곳 우선
-    - 비대각항: 작물 간격 위반 시 페널티
-    """
     h, w = S.shape
     Q = defaultdict(float)
 
@@ -67,13 +58,11 @@ def build_qubo(S, step_r, step_c, spacing_row_cm, spacing_col_cm):
     else:
         S_norm = (S - s_min) / (s_max - s_min)
 
-    # 대각항
     for r in range(h):
         for c in range(w):
             i = get_idx(r, c, w)
             Q[(i, i)] += -(count_reward + fertility_weight * float(S_norm[r, c]))
 
-    # 비대각항: 근접 금지
     dr_limit = max(0, int(math.ceil(spacing_row_cm / step_r)) - 1)
     dc_limit = max(0, int(math.ceil(spacing_col_cm / step_c)) - 1)
 
@@ -100,6 +89,8 @@ def build_qubo(S, step_r, step_c, spacing_row_cm, spacing_col_cm):
 
 def solve_sa_single(length_cm, width_cm, crop_key, seed=42, num_reads=120):
     """단일 작물 SA 최적화 + 히트맵 시각화"""
+    logger.info(f"[Single] Optimization started: crop={crop_key}, size={length_cm}x{width_cm}")
+
     crop = CROPS[crop_key]
     spacing_row_cm = int(crop['spacing_row_cm'])
     spacing_col_cm = int(crop['spacing_col_cm'])
@@ -131,7 +122,6 @@ def solve_sa_single(length_cm, width_cm, crop_key, seed=42, num_reads=120):
 
     simple_capacity = (length_cm // spacing_row_cm) * (width_cm // spacing_col_cm)
 
-    # ── 시각화 ──
     fig_w = min(14, max(6, w * 0.45))
     fig_h = min(10, max(4, h * 0.45))
     fig, ax = plt.subplots(figsize=(fig_w, fig_h))
@@ -165,6 +155,8 @@ def solve_sa_single(length_cm, width_cm, crop_key, seed=42, num_reads=120):
     buf.seek(0)
     plot_base64 = base64.b64encode(buf.read()).decode('utf-8')
 
+    logger.info(f"[Single] Optimization completed: crop={crop_key}, planted={plant_count}, energy={best_energy:.3f}")
+
     return {
         'crop_label': crop['label'],
         'spacing_text': crop['spacing_text'],
@@ -188,6 +180,8 @@ def solve_sa_single(length_cm, width_cm, crop_key, seed=42, num_reads=120):
 
 def execute_all_crops(length_cm, width_cm, seed=42, num_reads=120):
     """12종 작물 일괄 SA 최적화"""
+    logger.info(f"[All] Batch optimization started: size={length_cm}x{width_cm}, crops={len(CROPS)}")
+
     result_list = []
     area = length_cm * width_cm
 
@@ -232,5 +226,7 @@ def execute_all_crops(length_cm, width_cm, seed=42, num_reads=120):
             'occupancy': occupancy,
             'energy_per_crop': energy_per_crop,
         })
+
+    logger.info(f"[All] Batch optimization completed: {len(result_list)} crops processed")
 
     return result_list

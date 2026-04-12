@@ -42,6 +42,75 @@ app.include_router(web_router)
 app.include_router(info_router)
 app.include_router(optimization_router)
 
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from exceptions import (
+    KyuBitError, 
+    QUBOGenerationError, 
+    InvalidCropKeyError, 
+    InvalidFarmSizeError,
+    SolverTimeoutError
+)
+
+@app.exception_handler(QUBOGenerationError)
+async def qubo_error_handler(request: Request, exc: QUBOGenerationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": "qubo_generation_failed",
+            "message": str(exc),
+            "suggestion": "Check input parameters (farm size, crop spacing)"
+        }
+    )
+
+@app.exception_handler(InvalidCropKeyError)
+async def crop_key_error_handler(request: Request, exc: InvalidCropKeyError):
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": "invalid_crop_key",
+            "message": str(exc),
+            "suggestion": "Use GET /api/crops to see available crop keys"
+        }
+    )
+
+@app.exception_handler(InvalidFarmSizeError)
+async def farm_size_error_handler(request: Request, exc: InvalidFarmSizeError):
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": "invalid_farm_size",
+            "message": str(exc),
+            "suggestion": "Farm dimensions must be positive integers (in cm)"
+        }
+    )
+
+@app.exception_handler(SolverTimeoutError)
+async def solver_timeout_handler(request: Request, exc: SolverTimeoutError):
+    return JSONResponse(
+        status_code=504,
+        content={
+            "error": "solver_timeout",
+            "message": str(exc),
+            "suggestion": "Try reducing farm size or SA sample count"
+        }
+    )
+
+@app.exception_handler(Exception)
+async def general_error_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "internal_server_error",
+            "message": "An unexpected error occurred",
+            "detail": str(exc)
+        }
+    )
+
+
+
+
 # ── 로컬 실행 ──
 if __name__ == "__main__":
     import uvicorn
